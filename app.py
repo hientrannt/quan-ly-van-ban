@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import io
-import hashlib
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -32,8 +31,6 @@ st.markdown("""
         border-radius: 10px;
         margin: 10px 0;
     }
-    .uploadedFile {display: none}
-    .st-emotion-cache-1y4p8pa {padding-top: 2rem;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -43,17 +40,70 @@ if 'logged_in' not in st.session_state:
     st.session_state.username = None
     st.session_state.user_role = None
 
+# Hàm tạo data demo
+def create_demo_data():
+    """Tạo data demo để test khi không có file Excel"""
+    return {
+        'Users': pd.DataFrame({
+            'ID': [1, 2],
+            'Tên đăng nhập': ['admin', 'user'],
+            'Mật khẩu': ['Hientran', '123456'],
+            'Email': ['admin@test.com', 'user@test.com'],
+            'Quyền': ['admin', 'user'],
+            'Trạng thái': ['active', 'active'],
+            'Đăng nhập cuối': [datetime.now(), datetime.now()]
+        }),
+        'Documents': pd.DataFrame({
+            'ID': [1, 2, 3, 4, 5],
+            'Tên văn bản': ['VB001 - Thông báo nghỉ lễ', 'VB002 - Quy định làm việc', 
+                           'VB003 - Hướng dẫn sử dụng', 'VB004 - Chính sách bán hàng',
+                           'VB005 - Quy trình ISO'],
+            'Danh mục': ['Thông báo', 'Quy định', 'Hướng dẫn', 'Chính sách', 'Quy trình'],
+            'Phòng ban': ['Nhân sự', 'Nhân sự', 'IT', 'Kinh doanh', 'Chất lượng'],
+            'Ngày ban hành': [datetime.now() - timedelta(days=i*5) for i in range(5)],
+            'Trạng thái văn bản=': ['Còn hiệu lực', 'Còn hiệu lực', 'Hết hiệu lực', 
+                                   'Còn hiệu lực', 'Còn hiệu lực']
+        }),
+        'Categories': pd.DataFrame({
+            'ID': [1, 2, 3, 4, 5],
+            'Tên danh mục': ['Thông báo', 'Quy định', 'Hướng dẫn', 'Chính sách', 'Quy trình'],
+            'Icon': ['📢', '📋', '📖', '📜', '⚙️'],
+            'Màu sắc': ['#FF0000', '#00FF00', '#0000FF', '#FFA500', '#800080'],
+            'Mô tả': ['Các thông báo', 'Các quy định', 'Tài liệu hướng dẫn', 
+                     'Chính sách công ty', 'Quy trình làm việc']
+        }),
+        'Departments': pd.DataFrame({
+            'ID': [1, 2, 3, 4, 5],
+            'Tên phòng ban': ['Nhân sự', 'IT', 'Kế toán', 'Kinh doanh', 'Chất lượng'],
+            'Mô tả': ['Phòng nhân sự', 'Phòng IT', 'Phòng kế toán', 
+                     'Phòng kinh doanh', 'Phòng chất lượng']
+        }),
+        'InvoiceDocuments': pd.DataFrame({
+            'ID': [1, 2],
+            'Số Chứng Từ': ['CT001', 'CT002'],
+            'Tên Chứng Từ': ['Hóa đơn mua hàng', 'Phiếu chi'],
+            'Danh mục': ['Chứng từ', 'Chứng từ'],
+            'Phòng ban': ['Kế toán', 'Kế toán'],
+            'Ngày Phát Hành': [datetime.now(), datetime.now() - timedelta(days=1)],
+            'Trạng thái': ['Active', 'Active']
+        })
+    }
+
 # Hàm đọc dữ liệu Excel
 @st.cache_data
 def load_excel_data(file):
     """Load tất cả sheets từ file Excel"""
-    excel_data = {}
-    xls = pd.ExcelFile(file)
-    for sheet_name in xls.sheet_names:
-        excel_data[sheet_name] = pd.read_excel(file, sheet_name=sheet_name)
-    return excel_data
+    try:
+        excel_data = {}
+        xls = pd.ExcelFile(file)
+        for sheet_name in xls.sheet_names:
+            excel_data[sheet_name] = pd.read_excel(file, sheet_name=sheet_name)
+        return excel_data
+    except Exception as e:
+        st.error(f"Lỗi khi đọc file: {e}")
+        return None
 
-# Hàm login đơn giản
+# Hàm login
 def check_login(username, password, users_df):
     """Kiểm tra đăng nhập"""
     user = users_df[(users_df['Tên đăng nhập'] == username) & 
@@ -62,233 +112,29 @@ def check_login(username, password, users_df):
         return True, user.iloc[0]['Quyền']
     return False, None
 
-# Hàm hiển thị metrics dashboard
+# Hàm hiển thị metrics
 def show_dashboard_metrics(data):
     """Hiển thị thống kê tổng quan"""
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
-        st.metric("📄 Tổng văn bản", len(data['Documents']))
-        
+        st.metric("📄 Tổng văn bản", len(data.get('Documents', [])))
     with col2:
-        st.metric("📑 Chứng từ", len(data['InvoiceDocuments']))
-        
+        st.metric("📑 Chứng từ", len(data.get('InvoiceDocuments', [])))
     with col3:
-        st.metric("👥 Người dùng", len(data['Users']))
-        
+        st.metric("👥 Người dùng", len(data.get('Users', [])))
     with col4:
-        st.metric("🏢 Phòng ban", len(data['Departments']))
-        
+        st.metric("🏢 Phòng ban", len(data.get('Departments', [])))
     with col5:
-        st.metric("📁 Danh mục", len(data['Categories']))
+        st.metric("📁 Danh mục", len(data.get('Categories', [])))
 
-# Hàm tìm kiếm văn bản
+# Hàm tìm kiếm
 def search_documents(df, search_term):
     """Tìm kiếm trong DataFrame"""
     if search_term:
         mask = df.astype(str).apply(lambda x: x.str.contains(search_term, case=False, na=False)).any(axis=1)
         return df[mask]
     return df
-
-# Hàm hiển thị và chỉnh sửa văn bản
-def show_documents_management(documents_df, categories_df, departments_df):
-    """Quản lý văn bản chính"""
-    st.header("📄 Quản lý Văn bản")
-    
-    # Tabs cho các chức năng
-    tab1, tab2, tab3, tab4 = st.tabs(["📋 Danh sách", "➕ Thêm mới", "📊 Thống kê", "🔍 Tìm kiếm nâng cao"])
-    
-    with tab1:
-        # Bộ lọc
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            selected_category = st.selectbox(
-                "Danh mục",
-                ["Tất cả"] + list(documents_df['Danh mục'].dropna().unique())
-            )
-        
-        with col2:
-            selected_dept = st.selectbox(
-                "Phòng ban",
-                ["Tất cả"] + list(documents_df['Phòng ban'].dropna().unique())
-            )
-        
-        with col3:
-            selected_status = st.selectbox(
-                "Trạng thái",
-                ["Tất cả", "Còn hiệu lực", "Hết hiệu lực", "Active"]
-            )
-        
-        with col4:
-            search_term = st.text_input("🔍 Tìm kiếm nhanh", placeholder="Nhập từ khóa...")
-        
-        # Áp dụng bộ lọc
-        filtered_df = documents_df.copy()
-        
-        if selected_category != "Tất cả":
-            filtered_df = filtered_df[filtered_df['Danh mục'] == selected_category]
-        
-        if selected_dept != "Tất cả":
-            filtered_df = filtered_df[filtered_df['Phòng ban'] == selected_dept]
-        
-        if selected_status != "Tất cả":
-            filtered_df = filtered_df[filtered_df['Trạng thái văn bản='] == selected_status]
-        
-        if search_term:
-            filtered_df = search_documents(filtered_df, search_term)
-        
-        # Hiển thị kết quả
-        st.info(f"Tìm thấy {len(filtered_df)} văn bản")
-        
-        # Chỉnh sửa dữ liệu
-        edited_df = st.data_editor(
-            filtered_df,
-            use_container_width=True,
-            height=400,
-            column_config={
-                "ID": st.column_config.NumberColumn("ID", width="small"),
-                "Tên văn bản": st.column_config.TextColumn("Tên văn bản", width="large"),
-                "Danh mục": st.column_config.SelectboxColumn(
-                    "Danh mục",
-                    options=list(categories_df['Tên danh mục'].unique())
-                ),
-                "Phòng ban": st.column_config.SelectboxColumn(
-                    "Phòng ban",
-                    options=list(departments_df['Tên phòng ban'].unique())
-                ),
-                "Ngày ban hành": st.column_config.DateColumn("Ngày ban hành"),
-                "Trạng thái văn bản=": st.column_config.SelectboxColumn(
-                    "Trạng thái",
-                    options=["Còn hiệu lực", "Hết hiệu lực", "Active"]
-                )
-            },
-            hide_index=True
-        )
-        
-        # Nút lưu
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("💾 Lưu thay đổi", type="primary"):
-                st.success("Đã lưu thay đổi thành công!")
-        
-        with col2:
-            # Export
-            excel_buffer = io.BytesIO()
-            with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-                edited_df.to_excel(writer, sheet_name='Documents', index=False)
-            
-            st.download_button(
-                label="📥 Xuất Excel",
-                data=excel_buffer.getvalue(),
-                file_name=f"documents_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                mime="application/vnd.ms-excel"
-            )
-    
-    with tab2:
-        # Form thêm văn bản mới
-        st.subheader("Thêm văn bản mới")
-        
-        with st.form("add_document"):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                doc_name = st.text_input("Tên văn bản *")
-                category = st.selectbox("Danh mục *", categories_df['Tên danh mục'].unique())
-                department = st.selectbox("Phòng ban *", departments_df['Tên phòng ban'].unique())
-                issue_date = st.date_input("Ngày ban hành")
-            
-            with col2:
-                effective_date = st.date_input("Ngày hiệu lực")
-                expiry_date = st.date_input("Ngày hết hiệu lực")
-                status = st.selectbox("Trạng thái", ["Còn hiệu lực", "Hết hiệu lực"])
-                description = st.text_area("Mô tả")
-            
-            uploaded_file = st.file_uploader("Tải file đính kèm", type=['pdf', 'docx', 'xlsx'])
-            
-            submitted = st.form_submit_button("➕ Thêm văn bản", type="primary")
-            
-            if submitted and doc_name:
-                st.success(f"Đã thêm văn bản: {doc_name}")
-                st.balloons()
-    
-    with tab3:
-        # Thống kê
-        st.subheader("📊 Thống kê văn bản")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Biểu đồ theo danh mục
-            category_counts = documents_df['Danh mục'].value_counts()
-            fig1 = px.pie(
-                values=category_counts.values,
-                names=category_counts.index,
-                title="Phân bổ theo danh mục"
-            )
-            st.plotly_chart(fig1, use_container_width=True)
-        
-        with col2:
-            # Biểu đồ theo phòng ban
-            dept_counts = documents_df['Phòng ban'].value_counts().head(10)
-            fig2 = px.bar(
-                x=dept_counts.values,
-                y=dept_counts.index,
-                orientation='h',
-                title="Top 10 phòng ban có nhiều văn bản nhất"
-            )
-            st.plotly_chart(fig2, use_container_width=True)
-        
-        # Biểu đồ theo thời gian
-        if 'Ngày ban hành' in documents_df.columns:
-            documents_df['Ngày ban hành'] = pd.to_datetime(documents_df['Ngày ban hành'], errors='coerce')
-            monthly_docs = documents_df.groupby(documents_df['Ngày ban hành'].dt.to_period('M')).size()
-            
-            fig3 = go.Figure()
-            fig3.add_trace(go.Scatter(
-                x=monthly_docs.index.astype(str),
-                y=monthly_docs.values,
-                mode='lines+markers',
-                name='Số lượng văn bản'
-            ))
-            fig3.update_layout(title="Xu hướng ban hành văn bản theo tháng")
-            st.plotly_chart(fig3, use_container_width=True)
-    
-    with tab4:
-        # Tìm kiếm nâng cao
-        st.subheader("🔍 Tìm kiếm nâng cao")
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            search_name = st.text_input("Tên văn bản chứa")
-            search_categories = st.multiselect("Danh mục", documents_df['Danh mục'].dropna().unique())
-        
-        with col2:
-            date_from = st.date_input("Từ ngày")
-            date_to = st.date_input("Đến ngày")
-        
-        with col3:
-            search_status = st.multiselect("Trạng thái", ["Còn hiệu lực", "Hết hiệu lực", "Active"])
-            search_dept = st.multiselect("Phòng ban", documents_df['Phòng ban'].dropna().unique())
-        
-        if st.button("🔍 Tìm kiếm", type="primary"):
-            result_df = documents_df.copy()
-            
-            if search_name:
-                result_df = result_df[result_df['Tên văn bản'].str.contains(search_name, case=False, na=False)]
-            
-            if search_categories:
-                result_df = result_df[result_df['Danh mục'].isin(search_categories)]
-            
-            if search_status:
-                result_df = result_df[result_df['Trạng thái văn bản='].isin(search_status)]
-            
-            if search_dept:
-                result_df = result_df[result_df['Phòng ban'].isin(search_dept)]
-            
-            st.success(f"Tìm thấy {len(result_df)} kết quả")
-            st.dataframe(result_df, use_container_width=True)
 
 # Main App
 def main():
@@ -297,25 +143,40 @@ def main():
         st.image("https://via.placeholder.com/300x100/4285f4/ffffff?text=DHG+PHARMA", use_column_width=True)
         st.title("📄 Quản lý Văn bản")
         
-        # Upload file Excel
-        uploaded_file = st.file_uploader(
-            "Tải file Excel",
-            type=['xlsx', 'xls'],
-            help="Upload file Excel quản lý văn bản"
-        )
+        # Tùy chọn nguồn dữ liệu
+        use_demo = st.checkbox("🎯 Dùng data demo", value=True, 
+                               help="Tick để dùng data demo, bỏ tick để upload file")
         
-        if uploaded_file:
-            st.success("✅ Đã tải file thành công!")
+        data = None
+        
+        if not use_demo:
+            # Upload file Excel
+            uploaded_file = st.file_uploader(
+                "Tải file Excel",
+                type=['xlsx', 'xls'],
+                help="Upload file Excel quản lý văn bản"
+            )
             
-            # Login section
+            if uploaded_file:
+                st.success("✅ Đã tải file thành công!")
+                data = load_excel_data(uploaded_file)
+        else:
+            # Dùng data demo
+            st.info("🎯 Đang dùng data demo")
+            st.caption("Tài khoản: admin / Hientran")
+            data = create_demo_data()
+        
+        # Login section nếu có data
+        if data:
             if not st.session_state.logged_in:
                 st.divider()
                 st.subheader("🔐 Đăng nhập")
-                username = st.text_input("Tên đăng nhập")
-                password = st.text_input("Mật khẩu", type="password")
+                
+                username = st.text_input("Tên đăng nhập", value="admin" if use_demo else "")
+                password = st.text_input("Mật khẩu", type="password", 
+                                        value="Hientran" if use_demo else "")
                 
                 if st.button("Đăng nhập", type="primary", use_container_width=True):
-                    data = load_excel_data(uploaded_file)
                     is_valid, role = check_login(username, password, data['Users'])
                     
                     if is_valid:
@@ -335,194 +196,147 @@ def main():
                     st.session_state.username = None
                     st.session_state.user_role = None
                     st.rerun()
-                
-                # Menu điều hướng
-                st.divider()
-                page = st.radio(
-                    "📋 Menu",
-                    ["🏠 Tổng quan", "📄 Văn bản", "📑 Chứng từ", "👥 Người dùng", 
-                     "📁 Danh mục", "🏢 Phòng ban", "⚙️ Cài đặt"],
-                    label_visibility="collapsed"
-                )
     
-    # Main content
-    if uploaded_file and st.session_state.logged_in:
-        # Load data
-        data = load_excel_data(uploaded_file)
-        
+    # Main content area
+    if data and st.session_state.logged_in:
         # Header
         st.title("🏢 HỆ THỐNG QUẢN LÝ VĂN BẢN DHG PHARMA")
         st.caption(f"Cập nhật: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
         
-        # Hiển thị metrics
+        # Metrics
         show_dashboard_metrics(data)
         st.divider()
         
-        # Routing based on sidebar selection
-        if 'page' not in locals():
-            page = "🏠 Tổng quan"
+        # Tabs cho các chức năng
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(
+            ["🏠 Tổng quan", "📄 Văn bản", "📑 Chứng từ", "👥 Người dùng", "📁 Danh mục"]
+        )
         
-        if page == "🏠 Tổng quan":
+        with tab1:
             st.header("🏠 Tổng quan hệ thống")
             
-            # Thống kê nhanh
             col1, col2 = st.columns(2)
             
             with col1:
-                # Văn bản mới nhất
                 st.subheader("📄 Văn bản mới nhất")
-                recent_docs = data['Documents'].head(5)[['Tên văn bản', 'Danh mục', 'Ngày ban hành']]
-                st.dataframe(recent_docs, use_container_width=True, hide_index=True)
+                if 'Documents' in data and len(data['Documents']) > 0:
+                    recent_docs = data['Documents'].head(5)
+                    display_cols = ['Tên văn bản', 'Danh mục']
+                    display_cols = [col for col in display_cols if col in recent_docs.columns]
+                    if display_cols:
+                        st.dataframe(recent_docs[display_cols], use_container_width=True, hide_index=True)
             
             with col2:
-                # Chứng từ mới nhất
                 st.subheader("📑 Chứng từ mới nhất")
-                recent_invoices = data['InvoiceDocuments'].head(5)[['Tên Chứng Từ', 'Phòng ban', 'Ngày Phát Hành']]
-                st.dataframe(recent_invoices, use_container_width=True, hide_index=True)
+                if 'InvoiceDocuments' in data and len(data['InvoiceDocuments']) > 0:
+                    recent_inv = data['InvoiceDocuments'].head(5)
+                    display_cols = ['Tên Chứng Từ', 'Phòng ban']
+                    display_cols = [col for col in display_cols if col in recent_inv.columns]
+                    if display_cols:
+                        st.dataframe(recent_inv[display_cols], use_container_width=True, hide_index=True)
             
-            # Biểu đồ tổng quan
-            st.subheader("📊 Biểu đồ tổng quan")
-            
-            fig = go.Figure(data=[
-                go.Bar(name='Văn bản', x=['Tổng số'], y=[len(data['Documents'])]),
-                go.Bar(name='Chứng từ', x=['Tổng số'], y=[len(data['InvoiceDocuments'])]),
-                go.Bar(name='Người dùng', x=['Tổng số'], y=[len(data['Users'])])
-            ])
-            fig.update_layout(barmode='group', height=400)
-            st.plotly_chart(fig, use_container_width=True)
-            
-        elif page == "📄 Văn bản":
-            show_documents_management(data['Documents'], data['Categories'], data['Departments'])
-            
-        elif page == "📑 Chứng từ":
-            st.header("📑 Quản lý Chứng từ - Hóa đơn")
+            # Biểu đồ
+            if 'Documents' in data and 'Danh mục' in data['Documents'].columns:
+                st.subheader("📊 Thống kê theo danh mục")
+                category_counts = data['Documents']['Danh mục'].value_counts()
+                fig = px.pie(values=category_counts.values, names=category_counts.index)
+                st.plotly_chart(fig, use_container_width=True)
+        
+        with tab2:
+            st.header("📄 Quản lý Văn bản")
             
             # Tìm kiếm
-            search = st.text_input("🔍 Tìm kiếm chứng từ")
-            filtered = search_documents(data['InvoiceDocuments'], search)
+            search = st.text_input("🔍 Tìm kiếm văn bản")
             
-            # Hiển thị và chỉnh sửa
-            edited_invoices = st.data_editor(
-                filtered,
-                use_container_width=True,
-                height=500,
-                column_config={
-                    "Ngày Phát Hành": st.column_config.DateColumn("Ngày phát hành"),
-                    "Ngày hiệu lực": st.column_config.DateColumn("Ngày hiệu lực"),
-                }
-            )
-            
-            if st.button("💾 Lưu thay đổi chứng từ"):
-                st.success("Đã lưu thay đổi!")
+            if 'Documents' in data:
+                filtered = search_documents(data['Documents'], search)
                 
-        elif page == "👥 Người dùng":
+                # Editor
+                edited_docs = st.data_editor(
+                    filtered,
+                    use_container_width=True,
+                    height=400,
+                    num_rows="dynamic"
+                )
+                
+                if st.button("💾 Lưu thay đổi", type="primary"):
+                    st.success("Đã lưu thay đổi!")
+        
+        with tab3:
+            st.header("📑 Quản lý Chứng từ")
+            
+            if 'InvoiceDocuments' in data:
+                st.data_editor(
+                    data['InvoiceDocuments'],
+                    use_container_width=True,
+                    height=400,
+                    num_rows="dynamic"
+                )
+        
+        with tab4:
             st.header("👥 Quản lý Người dùng")
             
             if st.session_state.user_role == "admin":
-                # Chỉ admin mới được quản lý users
-                tab1, tab2 = st.tabs(["Danh sách", "Thêm mới"])
-                
-                with tab1:
-                    edited_users = st.data_editor(
+                if 'Users' in data:
+                    st.data_editor(
                         data['Users'],
                         use_container_width=True,
                         column_config={
-                            "Mật khẩu": st.column_config.TextColumn("Mật khẩu", disabled=True),
-                            "Quyền": st.column_config.SelectboxColumn(
-                                "Quyền",
-                                options=["admin", "user", "viewer"]
-                            ),
-                            "Trạng thái": st.column_config.SelectboxColumn(
-                                "Trạng thái",
-                                options=["active", "inactive"]
-                            )
+                            "Mật khẩu": st.column_config.TextColumn("Mật khẩu", disabled=True)
                         }
                     )
-                    
-                    if st.button("💾 Lưu thay đổi người dùng"):
-                        st.success("Đã cập nhật người dùng!")
-                
-                with tab2:
-                    with st.form("add_user"):
-                        new_username = st.text_input("Tên đăng nhập")
-                        new_password = st.text_input("Mật khẩu", type="password")
-                        new_email = st.text_input("Email")
-                        new_role = st.selectbox("Quyền", ["user", "viewer", "admin"])
-                        
-                        if st.form_submit_button("➕ Thêm người dùng"):
-                            st.success(f"Đã thêm người dùng: {new_username}")
             else:
-                st.warning("⚠️ Bạn không có quyền quản lý người dùng!")
-                
-        elif page == "📁 Danh mục":
+                st.warning("⚠️ Bạn không có quyền xem trang này!")
+        
+        with tab5:
             st.header("📁 Quản lý Danh mục")
             
-            edited_categories = st.data_editor(
-                data['Categories'],
-                use_container_width=True,
-                num_rows="dynamic"
-            )
-            
-            if st.button("💾 Lưu danh mục"):
-                st.success("Đã lưu danh mục!")
-                
-        elif page == "🏢 Phòng ban":
-            st.header("🏢 Quản lý Phòng ban")
-            
-            edited_departments = st.data_editor(
-                data['Departments'],
-                use_container_width=True,
-                num_rows="dynamic"
-            )
-            
-            if st.button("💾 Lưu phòng ban"):
-                st.success("Đã lưu phòng ban!")
-                
-        elif page == "⚙️ Cài đặt":
-            st.header("⚙️ Cài đặt hệ thống")
-            
-            if 'Settings' in data:
-                st.dataframe(data['Settings'], use_container_width=True)
-            else:
-                st.info("Không có dữ liệu cài đặt")
+            if 'Categories' in data:
+                st.data_editor(
+                    data['Categories'],
+                    use_container_width=True,
+                    num_rows="dynamic"
+                )
     
-    elif not uploaded_file:
+    elif not data:
         # Welcome screen
-        st.title("🏢 HỆ THỐNG QUẢN LÝ VĂN BẢN")
-        st.info("👈 Vui lòng tải file Excel để bắt đầu")
+        st.title("🏢 HỆ THỐNG QUẢN LÝ VĂN BẢN DHG PHARMA")
+        st.info("👈 Vui lòng chọn nguồn dữ liệu ở sidebar (Demo hoặc Upload file)")
         
         # Hướng dẫn
-        st.markdown("""
-        ### 📖 Hướng dẫn sử dụng:
+        col1, col2 = st.columns(2)
         
-        1. **Tải file Excel**: Upload file `QUAN LY TAI LIEU VAN BAN CHUNG TU.xlsx`
-        2. **Đăng nhập**: Sử dụng tài khoản có trong sheet Users
-        3. **Quản lý văn bản**: Xem, thêm, sửa, xóa văn bản
-        4. **Tìm kiếm**: Tìm kiếm nhanh hoặc nâng cao
-        5. **Báo cáo**: Xem thống kê và xuất báo cáo
-        
-        ### 🚀 Tính năng chính:
-        
-        - ✅ Quản lý văn bản, chứng từ
-        - ✅ Phân quyền người dùng
-        - ✅ Tìm kiếm thông minh
-        - ✅ Thống kê trực quan
-        - ✅ Export/Import dữ liệu
-        - ✅ Lưu trữ đám mây (Google Drive)
-        """)
-        
-        # Demo login info
-        with st.expander("🔐 Thông tin đăng nhập demo"):
-            st.code("""
-            Admin:
-            - Username: admin
-            - Password: Hientran
-            
-            User:
-            - Username: Admin1  
-            - Password: Hientran
+        with col1:
+            st.markdown("""
+            ### 🎯 Cách 1: Dùng Data Demo
+            1. Tick ✅ "Dùng data demo" ở sidebar
+            2. Đăng nhập: **admin / Hientran**
+            3. Khám phá các tính năng
             """)
-    
+        
+        with col2:
+            st.markdown("""
+            ### 📤 Cách 2: Upload File Excel
+            1. Bỏ tick "Dùng data demo"
+            2. Upload file Excel của bạn
+            3. Đăng nhập với tài khoản trong file
+            """)
+        
+        # Tạo file Excel mẫu
+        if st.button("📥 Tải file Excel mẫu"):
+            demo_data = create_demo_data()
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                for sheet_name, df in demo_data.items():
+                    df.to_excel(writer, sheet_name=sheet_name, index=False)
+            
+            st.download_button(
+                label="💾 Download Excel mẫu",
+                data=buffer.getvalue(),
+                file_name="demo_quan_ly_van_ban.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            
     elif not st.session_state.logged_in:
         st.warning("⚠️ Vui lòng đăng nhập để sử dụng hệ thống")
 

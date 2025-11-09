@@ -39,35 +39,87 @@ st.markdown("""
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
     .calendar-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 15px;
-        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 15px 20px;
+        background: #f8f9fa;
+        border-radius: 12px 12px 0 0;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .calendar-title {
         font-size: 24px;
         font-weight: bold;
-        border-radius: 10px 10px 0 0;
+        color: #2c3e50;
+        text-align: center;
+        flex: 1;
+    }
+
+    .calendar-stats {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        text-align: center;
+        min-width: 90px;
+    }
+
+    .stat-card:nth-child(1) {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    }
+
+    .stat-card:nth-child(2) {
+        background: linear-gradient(135deg, #f1f8e9 0%, #dcedc8 100%);
+    }
+
+    .stat-card:nth-child(3) {
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    }
+
+    .stat-value {
+        font-size: 22px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 4px;
+    }
+
+    .stat-label {
+        font-size: 11px;
+        color: #666;
+        font-weight: 500;
     }
 
     .calendar-weekdays {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        background: #f0f2f6;
-        border-bottom: 2px solid #ddd;
+        background: #e0e0e0;
+        gap: 7px;
+        padding: 7px 7px 0 7px;
     }
 
     .calendar-weekday {
-        padding: 15px;
+        background: #e0e0e0;
         text-align: center;
-        font-weight: bold;
-        color: #333;
-        border-right: 1px solid #ddd;
-    }
-
-    .calendar-weekday:last-child {
-        border-right: none;
+        padding: 10px 8px;
+        font-weight: 600;
+        font-size: 13px;
+        color: #2c3e50;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .calendar-weekday.sunday {
@@ -81,39 +133,53 @@ st.markdown("""
     .calendar-grid {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
+        background: #f8f9fa;
+        gap: 7px;
         flex: 1;
-        overflow: hidden;
+        overflow-y: auto;
+        padding: 7px;
     }
 
     .calendar-day {
-        border: 1px solid #ddd;
+        background: white;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        min-height: 120px;
         padding: 8px;
         display: flex;
         flex-direction: column;
         overflow-y: auto;
-        background: white;
-        min-height: 0;
+        transition: all 0.3s;
     }
 
     .calendar-day:hover {
-        background: #f8f9fa;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .calendar-day.other-month {
-        background: #f5f5f5;
-        opacity: 0.5;
+        opacity: 0.4;
+        background: #fafafa;
     }
 
     .calendar-day.today {
-        background: #fff3cd;
-        border: 2px solid #ffc107;
+        border-color: #f99d07;
+        background: #fff8f085;
+    }
+
+    .day-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #e0e0e0;
     }
 
     .day-number {
-        font-size: 18px;
-        font-weight: bold;
-        color: #333;
-        margin-bottom: 5px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #2c3e50;
     }
 
     .day-number.sunday {
@@ -122,6 +188,19 @@ st.markdown("""
 
     .day-number.saturday {
         color: #3498db;
+    }
+
+    .event-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffebeb;
+        color: #f43737;
+        font-weight: 700;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-left: 4px;
     }
 
     .lunar-date {
@@ -138,26 +217,82 @@ st.markdown("""
         margin-bottom: 5px;
     }
 
+    .events-list {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
     .event-item {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: linear-gradient(135deg, #fff9e6 0%, #fffef9 100%);
         padding: 4px 6px;
-        margin: 2px 0;
-        border-radius: 4px;
-        font-size: 11px;
-        word-wrap: break-word;
+        border-radius: 6px;
+        border-left: 3px solid #3782f4;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        transition: all 0.3s;
+        cursor: pointer;
+        min-height: 28px;
+    }
+
+    .event-item:hover {
+        background: linear-gradient(135deg, #fff3cc 0%, #fffcf0 100%);
+        transform: translateX(3px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     }
 
     .event-time {
         font-weight: bold;
-        margin-right: 4px;
+        font-size: 11px;
+        color: #666;
     }
 
     .event-content {
-        display: block;
-        white-space: normal;
+        font-size: 11px;
+        color: #333;
+        line-height: 1.3;
         overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .event-location {
+        font-size: 10px;
+        color: #888;
+        font-style: italic;
+    }
+
+    /* Responsive */
+    @media (max-width: 1199px) {
+        .calendar-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+        .calendar-weekday:nth-child(5),
+        .calendar-weekday:nth-child(6),
+        .calendar-weekday:nth-child(7) {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .calendar-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        .calendar-weekday:nth-child(3),
+        .calendar-weekday:nth-child(4),
+        .calendar-weekday:nth-child(5),
+        .calendar-weekday:nth-child(6),
+        .calendar-weekday:nth-child(7) {
+            display: none;
+        }
+        .calendar-header {
+            flex-direction: column;
+        }
+        .calendar-stats {
+            order: -1;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -452,7 +587,7 @@ def search_documents(df, search_term):
 
 # Hàm render calendar
 def render_calendar(year, month, events_df=None):
-    """Render calendar với events - FULL CONTAINER"""
+    """Render calendar với events - FULL CONTAINER với Stats"""
     import calendar as cal
 
     # Tạo calendar cho tháng
@@ -465,29 +600,59 @@ def render_calendar(year, month, events_df=None):
     # Tên ngày trong tuần
     weekdays = ["TH 2", "TH 3", "TH 4", "TH 5", "TH 6", "TH 7", "CN"]
 
-    # Chuẩn bị events dict
+    # Chuẩn bị events dict và tính stats
     events_dict = {}
+    total_events = 0
     if events_df is not None and len(events_df) > 0:
         for _, event in events_df.iterrows():
             event_date = event.get('Ngày dương')
             if isinstance(event_date, datetime):
-                day = event_date.day
-                if day not in events_dict:
-                    events_dict[day] = []
-                events_dict[day].append({
-                    'time': event.get('Giờ', ''),
-                    'content': event.get('Nội dung', ''),
-                    'location': event.get('Địa điểm', '')
-                })
+                if event_date.year == year and event_date.month == month:
+                    day = event_date.day
+                    if day not in events_dict:
+                        events_dict[day] = []
+                    events_dict[day].append({
+                        'time': event.get('Giờ', ''),
+                        'content': event.get('Nội dung', ''),
+                        'location': event.get('Địa điểm', '')
+                    })
+                    total_events += 1
 
-    # Lấy ngày hôm nay
+    # Tính số ngày có công việc
+    days_with_events = len(events_dict)
+
+    # Tính upcoming events (7 ngày tới)
     today = datetime.now()
+    upcoming_count = 0
+    if events_df is not None and len(events_df) > 0:
+        for _, event in events_df.iterrows():
+            event_date = event.get('Ngày dương')
+            if isinstance(event_date, datetime):
+                if today <= event_date <= today + timedelta(days=7):
+                    upcoming_count += 1
 
-    # Tạo HTML
+    # Tạo HTML với Stats
     html = f"""
     <div class="calendar-container">
         <div class="calendar-header">
-            {month_names[month]} năm {year}
+            <div class="calendar-stats">
+                <div class="stat-card">
+                    <div class="stat-value">{total_events}</div>
+                    <div class="stat-label">Tổng công việc</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{days_with_events}</div>
+                    <div class="stat-label">Ngày có việc</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{upcoming_count}</div>
+                    <div class="stat-label">7 ngày tới</div>
+                </div>
+            </div>
+
+            <div class="calendar-title">
+                {month_names[month]} năm {year}
+            </div>
         </div>
 
         <div class="calendar-weekdays">
@@ -527,28 +692,39 @@ def render_calendar(year, month, events_df=None):
                 lunar = convert_solar_to_lunar(day, month, year)
                 lunar_special = get_lunar_special_event(lunar['day'], lunar['month'])
 
-                # Bắt đầu render ngày
+                # Đếm số events trong ngày
+                event_count = len(events_dict.get(day, []))
+
+                # Bắt đầu render ngày với day-header
                 html += f'<div class="{" ".join(css_classes)}">'
-                html += f'<div class="day-number {day_num_class}">{day:02d}/{month:02d}/{year}</div>'
-                html += f'<div class="lunar-date">{lunar["day"]:02d}/{lunar["month"]:02d}/{lunar["year"]}</div>'
+                html += '<div class="day-header">'
+                html += f'<div class="day-number {day_num_class}">{day:02d}/{month:02d}'
+                if event_count > 0:
+                    html += f'<span class="event-count">{event_count}</span>'
+                html += '</div></div>'
+
+                html += f'<div class="lunar-date">{lunar["day"]:02d}/{lunar["month"]:02d} ÂL</div>'
 
                 # Hiển thị ngày âm đặc biệt
                 if lunar['day'] in [1, 15] or (lunar['day'] >= 2 and lunar['day'] <= 4 and lunar['month'] == 1):
                     html += f'<div class="lunar-special">{lunar_special}</div>'
-                else:
-                    html += f'<div class="lunar-date">{weekdays[weekday] if weekday < 6 else "Chủ nhật"}</div>'
 
-                # Hiển thị events
+                # Hiển thị events trong events-list
                 if day in events_dict:
+                    html += '<div class="events-list">'
                     for event in events_dict[day]:
                         time_str = event['time'] if event['time'] else ''
                         content = event['content']
-                        html += f'''
-                        <div class="event-item">
-                            <span class="event-time">{time_str}</span>
-                            <span class="event-content">{content}</span>
-                        </div>
-                        '''
+                        location = event['location'] if event['location'] else ''
+
+                        html += '<div class="event-item">'
+                        if time_str:
+                            html += f'<span class="event-time">{time_str}</span>'
+                        html += f'<span class="event-content">{content}</span>'
+                        if location:
+                            html += f'<span class="event-location">📍 {location}</span>'
+                        html += '</div>'
+                    html += '</div>'
 
                 html += '</div>'
 
